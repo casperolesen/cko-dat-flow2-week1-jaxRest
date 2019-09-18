@@ -1,6 +1,6 @@
 package rest;
 
-import entities.RenameMe;
+import entities.Person;
 import utils.EMF_Creator;
 import io.restassured.RestAssured;
 import static io.restassured.RestAssured.given;
@@ -14,6 +14,7 @@ import org.glassfish.grizzly.http.util.HttpStatus;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +25,7 @@ import utils.EMF_Creator.Strategy;
 
 //Uncomment the line below, to temporarily disable this test
 //@Disabled
-public class RenameMeResourceTest {
+public class PersonResourceTest {
 
     private static final int SERVER_PORT = 7777;
     private static final String SERVER_URL = "http://localhost/api";
@@ -34,6 +35,10 @@ public class RenameMeResourceTest {
     static final URI BASE_URI = UriBuilder.fromUri(SERVER_URL).port(SERVER_PORT).build();
     private static HttpServer httpServer;
     private static EntityManagerFactory emf;
+    
+    private Person pOne = new Person("firstName 1", "lastName 1", "88888888");
+    private Person pTwo = new Person("firstName 2", "lastName 2", "45454545");
+    private Person pThree = new Person("firstName 3", "lastName 3", "00000000");
 
     static HttpServer startServer() {
         ResourceConfig rc = ResourceConfig.forApplication(new ApplicationConfig());
@@ -70,9 +75,10 @@ public class RenameMeResourceTest {
         EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
-            em.createNamedQuery("RenameMe.deleteAllRows").executeUpdate();
-            em.persist(new RenameMe("Some txt","More text"));
-            em.persist(new RenameMe("aaa","bbb"));
+            em.createNamedQuery("Person.deleteAllRows").executeUpdate();
+            em.persist(pOne);
+            em.persist(pTwo);
+            em.persist(pThree);
            
             em.getTransaction().commit();
         } finally {
@@ -83,7 +89,7 @@ public class RenameMeResourceTest {
     @Test
     public void testServerIsUp() {
         System.out.println("Testing is server UP");
-        given().when().get("/xxx").then().statusCode(200);
+        given().when().get("/person").then().statusCode(200);
     }
    
     //This test assumes the database contains two rows
@@ -91,7 +97,7 @@ public class RenameMeResourceTest {
     public void testDummyMsg() throws Exception {
         given()
         .contentType("application/json")
-        .get("/xxx/").then()
+        .get("/person/").then()
         .assertThat()
         .statusCode(HttpStatus.OK_200.getStatusCode())
         .body("msg", equalTo("Hello World"));   
@@ -101,9 +107,29 @@ public class RenameMeResourceTest {
     public void testCount() throws Exception {
         given()
         .contentType("application/json")
-        .get("/xxx/count").then()
+        .get("/person/count").then()
         .assertThat()
         .statusCode(HttpStatus.OK_200.getStatusCode())
-        .body("count", equalTo(2));   
+        .body("count", equalTo(3));   
+    }
+    
+    @Test
+    public void testGetAllPersons() throws Exception {
+        given()
+        .contentType("application/json")
+        .get("person/all").then()
+        .assertThat()
+        .statusCode(HttpStatus.OK_200.getStatusCode())
+        .body("size()", is(3));
+    }
+    
+    @Test
+    public void testGetPerson() throws Exception {
+        given()
+        .contentType("application/json")
+        .get("person/" + pOne.getId()).then()
+        .assertThat()
+        .statusCode(HttpStatus.OK_200.getStatusCode())
+        .body("fName", equalTo("firstName 1"));
     }
 }
